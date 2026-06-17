@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      TICKET_API_DATABASE_URL: sqlite+aiosqlite:////data/ticket_booking.db
+    volumes:
+      - ticket_data:/data
+
+volumes:
+  ticket_data:
