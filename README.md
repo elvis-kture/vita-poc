@@ -76,18 +76,5 @@ The application uses a layered structure:
 - `app/repositories`: SQLAlchemy query objects for persistence.
 - `app/db`: database models, engine/session setup, and schema creation.
 
-This keeps the SQLite-specific details isolated. A PostgreSQL migration would mainly replace the transaction-locking strategy with row-level locks such as `SELECT ... FOR UPDATE` inside the repository/service transaction boundary.
-
-## Concurrency
-
-SQLite allows only one writer at a time, but read-then-write application logic can still overbook if the availability check is not protected by the write lock. The booking service starts its critical section with `BEGIN IMMEDIATE`, which obtains SQLite's reserved write lock before expired holds are canceled, availability is counted, and a new hold is inserted. Concurrent booking requests serialize at that point, so only requests that observe enough remaining capacity for their requested `quantity` can create a hold.
-
-The test suite includes `test_concurrent_booking_requests_do_not_overbook`, which sends 100 simultaneous hold attempts for two tickets each against an event with five tickets and verifies that only two bookings succeed.
-
-## Idempotency
-
-`POST /bookings/{booking_id}/pay` requires an `Idempotency-Key` header. The payment service checks for an existing record under the same transaction lock. If the key was already processed, it returns the original stored status code and body. This makes client retries safe after network timeouts and prevents a repeated payment attempt from changing state twice.
-
-## Hold expiration
-
-The app starts an in-process background task that runs periodically and cancels expired `HELD` bookings. Booking and payment paths also handle expired holds inside their own transaction so correctness does not depend on the worker running at an exact second.
+This keeps the SQLite-specific details isolated. A PostgreSQL migration would mainly replace the transaction-locking strategy with row-level locks such as `SELECT ... FOR UPDATE` inside the repository/service transaction boundary 
+with additional DB constraint for ticket amount value greater than 0.
